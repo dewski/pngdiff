@@ -1,4 +1,4 @@
-package pngdiff
+package main
 
 import "os"
 import "fmt"
