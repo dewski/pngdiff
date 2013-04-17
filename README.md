@@ -11,3 +11,7 @@ Tool to diff 2 images and return:
 ```go
 pngdiff fixtures/large/base.png fixtures/large/target.png
 ```
+
+# Compiling
+
+Just run `make`.
