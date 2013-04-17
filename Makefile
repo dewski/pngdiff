@@ -1,10 +1,11 @@
 all: install
 
 install: build
-	mv pngdiff bin/
+	mv main bin/
+	mv bin/main bin/pngdiff
 
-build: pngdiff.go
-	go build pngdiff.go
+build: main.go
+	go build main.go
 
 test: install
 	bin/pngdiff fixtures/large/base.png fixtures/large/target.png

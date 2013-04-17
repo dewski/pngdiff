@@ -1,9 +1,15 @@
-package main
+package pngdiff
 
-import "os"
-import "fmt"
-import "image"
-import "image/png"
+import (
+  "os"
+  "fmt"
+  "image"
+  "image/png"
+)
+
+type Pixel struct {
+    X, Y int
+}
 
 func loadImage(path string) (image.Image, error) {
   file, err := os.Open(path)
@@ -19,20 +25,21 @@ func loadImage(path string) (image.Image, error) {
   return loadedImage, nil
 }
 
-func main() {
-    baseImagePath := os.Args[1]
-    targetImagePath := os.Args[2]
+func Diff(basePath string, targetPath string) {
+    // additions := []int{}
+    // deletions := []int{}
+    // diffs     := []int{}
 
-    baseImage, err := loadImage(baseImagePath)
+    baseImage, err := loadImage(basePath)
     if err != nil {
     }
-    targetImage, err := loadImage(targetImagePath)
+    targetImage, err := loadImage(targetPath)
     if err != nil {
     }
 
-    fmt.Println(baseImagePath)
+    fmt.Println(basePath)
     fmt.Println(baseImage.Bounds().Size())
 
-    fmt.Println(targetImagePath)
+    fmt.Println(targetPath)
     fmt.Println(targetImage.Bounds().Size())
 }
