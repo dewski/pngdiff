@@ -23,7 +23,7 @@ func loadImage(path string) (image.Image, error) {
 	return loadedImage, nil
 }
 
-func samePixel(basePixel color.Color, comparePixel color.RGBA) bool {
+func samePixel(basePixel, comparePixel color.Color) bool {
 	baseR, baseG, baseB, baseA := basePixel.RGBA()
 	compareR, compareG, compareB, compareA := comparePixel.RGBA()
 
@@ -52,8 +52,8 @@ func Diff(basePath string, comparePath string) {
 	if err != nil {
 	}
 
-	baseData := baseImage.(*image.NRGBA)
-	compareData := compareImage.(*image.NRGBA)
+	baseData := baseImage.(*image.RGBA)
+	compareData := compareImage.(*image.RGBA)
 
 	// Move this into Struct
 	baseWidth := baseImage.Bounds().Dx()
@@ -63,12 +63,9 @@ func Diff(basePath string, comparePath string) {
 
 	additions := []uint8{}
 	deletions := []uint8{}
-	// diffs := []uint8{}
+	diffs := []uint8{}
 
 	maxHeight := maxHeight(baseImage, compareImage)
-
-	fmt.Println(baseData.PixOffset(1, 0))
-	fmt.Println(len(compareData.Pix))
 
 	for y := 0; y < maxHeight; y++ {
 		compareY := y + 1
@@ -86,27 +83,27 @@ func Diff(basePath string, comparePath string) {
 
 			deletions = append(deletions, baseData.Pix[start:finish]...)
 		} else {
-			startPixel := realBaseWidth * y
-			endPixel := startPixel + realBaseWidth
+			startPixel := baseWidth * y
+			endPixel := startPixel + baseWidth
 			x := 0
 
 			for i := startPixel; i < endPixel; i++ {
 				realX := x + 1
 
-				// The base image is wider than the comparison image.
-				if realX > realCompareWidth {
-					start := startPixel + realX
-					finish := startPixel + (realBaseWidth - realX)
-					deletions = append(deletions, baseData.Pix[start:finish]...)
-				} else if realX == realBaseWidth && compareWidth > baseWidth {
-					start := compareY * realBaseWidth
-					finish := compareY * realCompareWidth
+				// The comparison image is wider than the base image.
+				if realX == baseWidth && compareWidth > baseWidth {
+					start := compareData.PixOffset(x, y)
+					finish := compareY * compareWidth
 					additions = append(additions, compareData.Pix[start:finish]...)
+				} else if realX == compareWidth && baseWidth > compareWidth {
+					start := baseData.PixOffset(x, y)
+					finish := compareY * baseWidth
+					deletions = append(deletions, baseData.Pix[start:finish]...)
 				} else {
 					basePixel := baseImage.At(x, y)
 					comparePixel := compareImage.At(x, y)
-					if !samePixel(currentBasePixel, currentComparePixel) {
-						fmt.Println("diff")
+					if !samePixel(basePixel, comparePixel) {
+						diffs = append(diffs, make([]uint8, 4)...)
 					}
 				}
 
@@ -121,5 +118,7 @@ func Diff(basePath string, comparePath string) {
 
 	fmt.Println(len(deletions) / 4)
 	fmt.Println(len(deletions))
-	// fmt.Println(len(test))
+
+	fmt.Println(len(diffs) / 4)
+	fmt.Println(len(diffs))
 }
