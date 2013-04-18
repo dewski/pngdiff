@@ -44,7 +44,7 @@ func maxHeight(baseImage, targetImage image.Image) int {
 	return int(math.Max(baseHeight, targetHeight))
 }
 
-func Diff(basePath string, comparePath string) {
+func Diff(basePath string, comparePath string) (additionsCount int, deletionsCount int, diffsCount int, err error) {
 	baseImage, err := loadImage(basePath)
 	if err != nil {
 	}
@@ -52,8 +52,8 @@ func Diff(basePath string, comparePath string) {
 	if err != nil {
 	}
 
-	baseData := baseImage.(*image.RGBA)
-	compareData := compareImage.(*image.RGBA)
+	baseData := baseImage.(*image.NRGBA)
+	compareData := compareImage.(*image.NRGBA)
 
 	// Move this into Struct
 	baseWidth := baseImage.Bounds().Dx()
@@ -70,13 +70,11 @@ func Diff(basePath string, comparePath string) {
 	for y := 0; y < maxHeight; y++ {
 		compareY := y + 1
 
-		// If the compare image is taller than the base image.
 		if emptyPixel(baseImage.At(0, y)) {
 			start := y * realCompareWidth
 			finish := start + realCompareWidth
 
 			additions = append(additions, compareData.Pix[start:finish]...)
-			// If the base image is taller than the target image.
 		} else if emptyPixel(compareImage.At(0, y)) {
 			start := y * realBaseWidth
 			finish := start + realBaseWidth
@@ -90,7 +88,6 @@ func Diff(basePath string, comparePath string) {
 			for i := startPixel; i < endPixel; i++ {
 				realX := x + 1
 
-				// The comparison image is wider than the base image.
 				if realX == baseWidth && compareWidth > baseWidth {
 					start := compareData.PixOffset(x, y)
 					finish := compareY * compareWidth
@@ -109,16 +106,8 @@ func Diff(basePath string, comparePath string) {
 
 				x++
 			}
-			// fmt.Println("baseImage and compareImage have y offset", y)
 		}
 	}
 
-	fmt.Println(len(additions) / 4)
-	fmt.Println(len(additions))
-
-	fmt.Println(len(deletions) / 4)
-	fmt.Println(len(deletions))
-
-	fmt.Println(len(diffs) / 4)
-	fmt.Println(len(diffs))
+	return (len(additions) / 4), (len(deletions) / 4), (len(diffs) / 4), nil
 }
