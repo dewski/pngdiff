@@ -18,13 +18,13 @@ func main() {
 		values := r.URL.Query()
 		basePath := values["base"][0]
 		comparePath := values["compare"][0]
-		additions, deletions, diffs, err := pngdiff.Diff(basePath, comparePath)
+		additions, deletions, diffs, changes, err := pngdiff.Diff(basePath, comparePath)
 
 		if err != nil {
 			render404(rw, err)
 		} else {
-			fmt.Fprintf(rw, "{\"additions\": %d, \"deletions\": %d, \"diffs\": %d}", additions, deletions, diffs)
+			fmt.Fprintf(rw, "{\"additions\": %d, \"deletions\": %d, \"diffs\": %d, \"changes\": %f}", additions, deletions, diffs, changes)
 		}
 	})
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":1339", nil))
 }

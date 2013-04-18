@@ -44,15 +44,15 @@ func maxHeight(baseImage, compareImage image.Image) int {
 	return int(math.Max(baseHeight, compareHeight))
 }
 
-func Diff(basePath string, comparePath string) (additionsCount int, deletionsCount int, diffsCount int, err error) {
+func Diff(basePath string, comparePath string) (additionsCount int, deletionsCount int, diffsCount int, changesCount float64, err error) {
 	baseImage, err := loadImage(basePath)
 	if err != nil {
-		return 0, 0, 0, errors.New("Couldn't decode the base image.")
+		return 0, 0, 0, 0.0, errors.New("Couldn't decode the base image.")
 	}
 
 	compareImage, err := loadImage(comparePath)
 	if err != nil {
-		return 0, 0, 0, errors.New("Couldn't decode the comparison image.")
+		return 0, 0, 0, 0.0, errors.New("Couldn't decode the comparison image.")
 	}
 
 	baseData := baseImage.(*image.NRGBA)
@@ -92,12 +92,12 @@ func Diff(basePath string, comparePath string) (additionsCount int, deletionsCou
 				realX := x + 1
 
 				if realX == baseWidth && compareWidth > baseWidth {
-					start := compareData.PixOffset(x, y)
-					finish := compareY * compareWidth
+					start := compareData.PixOffset(realX, y)
+					finish := compareY * realCompareWidth
 					additions = append(additions, compareData.Pix[start:finish]...)
 				} else if realX == compareWidth && baseWidth > compareWidth {
-					start := baseData.PixOffset(x, y)
-					finish := compareY * baseWidth
+					start := baseData.PixOffset(realX, y)
+					finish := compareY * realBaseWidth
 					deletions = append(deletions, baseData.Pix[start:finish]...)
 				} else {
 					basePixel := baseImage.At(x, y)
@@ -112,5 +112,14 @@ func Diff(basePath string, comparePath string) (additionsCount int, deletionsCou
 		}
 	}
 
-	return (len(additions) / 4), (len(deletions) / 4), (len(diffs) / 4), nil
+	additionsCount = len(additions) / 4
+	deletionsCount = len(deletions) / 4
+	diffsCount = len(diffs) / 4
+
+	totalChanges := additionsCount + deletionsCount + diffsCount
+	var baseHeight float64 = float64(baseImage.Bounds().Dy())
+	var baseArea float64 = float64(float64(baseWidth) * baseHeight)
+	changesCount = (float64(totalChanges) / baseArea) * 100
+
+	return
 }

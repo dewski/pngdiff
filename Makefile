@@ -7,5 +7,5 @@ install: build
 build: main.go
 	go build main.go
 
-test: install
-	bin/pngdiff fixtures/large/base.png fixtures/large/target.png
+run: install
+	bin/pngdiff
