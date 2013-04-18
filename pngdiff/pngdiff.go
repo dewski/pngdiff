@@ -1,7 +1,7 @@
 package pngdiff
 
 import (
-	"fmt"
+	"errors"
 	"image"
 	"image/color"
 	"image/png"
@@ -12,12 +12,12 @@ import (
 func loadImage(path string) (image.Image, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		fmt.Println("Couldn't load the file.")
+		return nil, errors.New("Couldn't load the file.")
 	}
 
 	loadedImage, err := png.Decode(file)
 	if err != nil {
-		fmt.Println("Couldn't decode the PNG.")
+		return nil, errors.New("Couldn't decode the PNG.")
 	}
 
 	return loadedImage, nil
@@ -38,18 +38,21 @@ func emptyPixel(basePixel color.Color) bool {
 	return samePixel(basePixel, emptyPixel)
 }
 
-func maxHeight(baseImage, targetImage image.Image) int {
+func maxHeight(baseImage, compareImage image.Image) int {
 	baseHeight := float64(baseImage.Bounds().Dy())
-	targetHeight := float64(targetImage.Bounds().Dy())
-	return int(math.Max(baseHeight, targetHeight))
+	compareHeight := float64(compareImage.Bounds().Dy())
+	return int(math.Max(baseHeight, compareHeight))
 }
 
 func Diff(basePath string, comparePath string) (additionsCount int, deletionsCount int, diffsCount int, err error) {
 	baseImage, err := loadImage(basePath)
 	if err != nil {
+		return 0, 0, 0, errors.New("Couldn't decode the base image.")
 	}
+
 	compareImage, err := loadImage(comparePath)
 	if err != nil {
+		return 0, 0, 0, errors.New("Couldn't decode the comparison image.")
 	}
 
 	baseData := baseImage.(*image.NRGBA)

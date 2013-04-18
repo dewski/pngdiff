@@ -7,6 +7,10 @@ import (
 	"net/http"
 )
 
+func render404(rw http.ResponseWriter, err error) {
+	fmt.Fprintf(rw, "{\"error\": \"%s\"}", err)
+}
+
 func main() {
 	http.HandleFunc("/process", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
@@ -16,7 +20,9 @@ func main() {
 		comparePath := values["compare"][0]
 		additions, deletions, diffs, err := pngdiff.Diff(basePath, comparePath)
 
-		if err == nil {
+		if err != nil {
+			render404(rw, err)
+		} else {
 			fmt.Fprintf(rw, "{\"additions\": %d, \"deletions\": %d, \"diffs\": %d}", additions, deletions, diffs)
 		}
 	})
