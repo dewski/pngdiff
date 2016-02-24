@@ -1,0 +1,5 @@
+{
+	"ImportPath": "github.com/dewski/pngdiff",
+	"GoVersion": "go1.5",
+	"Deps": []
+}

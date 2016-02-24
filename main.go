@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"./pngdiff"
+	"github.com/dewski/pngdiff/cmd/pngdiff"
 )
 
 func render404(rw http.ResponseWriter, err error) {
