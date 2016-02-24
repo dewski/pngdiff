@@ -1,0 +1,12 @@
+{
+  "name": "pngdiff",
+  "description": "Go Getting Started Example App",
+  "keywords": [
+    "go",
+    "sitegif"
+  ],
+  "image": "heroku/go:1.6",
+  "mount_dir": "src/github.com/dewski/pngdiff",
+  "website": "http://github.com/dewski/pngdiff",
+  "repository": "http://github.com/dewski/pngdiff"
+}

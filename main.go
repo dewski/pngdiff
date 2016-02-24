@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"./pngdiff"
@@ -14,6 +15,12 @@ func render404(rw http.ResponseWriter, err error) {
 }
 
 func main() {
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		port = "1339"
+	}
+
 	http.HandleFunc("/process", func(rw http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		rw.Header().Set("Content-Type", "application/json")
@@ -31,5 +38,5 @@ func main() {
 			fmt.Fprintf(rw, "{\"additions\": %d, \"deletions\": %d, \"diffs\": %d, \"changes\": %f}", additions, deletions, diffs, changes)
 		}
 	})
-	log.Fatal(http.ListenAndServe(":1339", nil))
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
