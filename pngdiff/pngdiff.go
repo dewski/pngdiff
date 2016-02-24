@@ -2,12 +2,48 @@ package pngdiff
 
 import (
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
+	"io/ioutil"
 	"math"
+	"net/http"
 	"os"
+	"time"
 )
+
+func downloadFile(url string) (path string, err error) {
+	// Create the file
+	tmpfile, err := ioutil.TempFile("", "screenshot")
+	if err != nil {
+		return
+	}
+	path = tmpfile.Name()
+
+	// Get the data
+	start := time.Now()
+	resp, err := http.Get(url)
+	if err != nil {
+		return
+	}
+	fmt.Println(url, time.Since(start))
+	defer resp.Body.Close()
+
+	// Writer the body to file
+	contents, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+
+	size, err := tmpfile.Write(contents)
+	if err != nil {
+		return
+	}
+	fmt.Printf("url=%s size=%d tmpfile=%s\n", url, size, path)
+
+	return
+}
 
 func loadImage(path string) (image.Image, error) {
 	file, err := os.Open(path)
@@ -21,6 +57,22 @@ func loadImage(path string) (image.Image, error) {
 	}
 
 	return loadedImage, nil
+}
+
+func fetchImage(url string) (image.Image, error) {
+	path, err := downloadFile(url)
+	if err != nil {
+		return nil, err
+	}
+
+	defer os.Remove(path)
+
+	image, err := loadImage(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return image, nil
 }
 
 func samePixel(basePixel, comparePixel color.Color) bool {
@@ -44,13 +96,14 @@ func maxHeight(baseImage, compareImage image.Image) int {
 	return int(math.Max(baseHeight, compareHeight))
 }
 
-func Diff(basePath string, comparePath string) (additionsCount int, deletionsCount int, diffsCount int, changesCount float64, err error) {
-	baseImage, err := loadImage(basePath)
+// Diff is cool
+func Diff(baseURL string, compareURL string) (additionsCount int, deletionsCount int, diffsCount int, changesCount float64, err error) {
+	baseImage, err := fetchImage(baseURL)
 	if err != nil {
 		return 0, 0, 0, 0.0, errors.New("Couldn't decode the base image.")
 	}
 
-	compareImage, err := loadImage(comparePath)
+	compareImage, err := fetchImage(compareURL)
 	if err != nil {
 		return 0, 0, 0, 0.0, errors.New("Couldn't decode the comparison image.")
 	}
@@ -117,8 +170,8 @@ func Diff(basePath string, comparePath string) (additionsCount int, deletionsCou
 	diffsCount = len(diffs) / 4
 
 	totalChanges := additionsCount + deletionsCount + diffsCount
-	var baseHeight float64 = float64(baseImage.Bounds().Dy())
-	var baseArea float64 = float64(float64(baseWidth) * baseHeight)
+	baseHeight := float64(baseImage.Bounds().Dy())
+	baseArea := float64(float64(baseWidth) * baseHeight)
 	changesCount = (float64(totalChanges) / baseArea) * 100
 
 	return

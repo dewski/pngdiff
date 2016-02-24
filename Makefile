@@ -1,8 +1,8 @@
 all: install
 
 install: build
-	mv main bin/
-	mv bin/main bin/pngdiff
+	mkdir -p bin
+	mv main bin/pngdiff
 
 build: main.go
 	go build main.go
