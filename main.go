@@ -38,5 +38,10 @@ func main() {
 			fmt.Fprintf(rw, "{\"additions\": %d, \"deletions\": %d, \"diffs\": %d, \"changes\": %f}", additions, deletions, diffs, changes)
 		}
 	})
+
+	http.HandleFunc("/_ping", func(rw http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(rw, "OK - %s", time.Now())
+	})
+
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
