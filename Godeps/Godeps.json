@@ -1,5 +1,14 @@
 {
 	"ImportPath": "github.com/dewski/pngdiff",
 	"GoVersion": "go1.5",
-	"Deps": []
+	"Deps": [
+		{
+			"ImportPath": "github.com/quipo/statsd",
+			"Rev": "3a951cc6caa8872a62b1111f43bba2abb3c365b6"
+		},
+		{
+			"ImportPath": "github.com/quipo/statsd/event",
+			"Rev": "3a951cc6caa8872a62b1111f43bba2abb3c365b6"
+		}
+	]
 }
