@@ -12,6 +12,8 @@ import (
 	"github.com/dewski/pngdiff/cmd/pngdiff"
 )
 
+var stats *statsd.StatsdClient
+
 func render500(rw http.ResponseWriter, err error) {
 	rw.WriteHeader(http.StatusInternalServerError)
 	fmt.Fprintf(rw, "{\"error\": \"%s\"}", err)
@@ -52,7 +54,7 @@ func main() {
 		port = "1339"
 	}
 
-	stats := createStatsd()
+	stats = createStatsd()
 
 	http.HandleFunc("/process", func(rw http.ResponseWriter, r *http.Request) {
 
