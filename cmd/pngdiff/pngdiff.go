@@ -105,11 +105,29 @@ type Region struct {
 	Y2    int `json:"y2"`
 }
 
+// Width calculates the region's width
+func (r *Region) Width() int {
+	return r.X2 - r.X1
+}
+
+// Height calculates the region's height
+func (r *Region) Height() int {
+	return r.Y2 - r.Y1
+}
+
+// Area calculates the region's total size
+func (r *Region) Area() int {
+	return r.Width() * r.Height()
+}
+
 // Relative luminance
 func relativeLuminance(pixel color.Color) float64 {
 	r, g, b, _ := pixel.RGBA()
 	return (0.2126 * float64(r)) + (0.7152 * float64(g)) + (0.0722 * float64(b))
 }
+
+// MinimumRegionArea defines how big a region must be.
+const MinimumRegionArea = 25
 
 // DetectRegions finds regions
 // Uses Connected-component labeling https://en.wikipedia.org/wiki/Connected-component_labeling
@@ -121,22 +139,24 @@ func DetectRegions(imageURL string) (regions []*Region, err error) {
 
 	imageWidth := sourceImage.Bounds().Dx()
 	imageHeight := sourceImage.Bounds().Dy()
+
+	imageData := sourceImage.(*image.NRGBA)
+	var nn, nw, ne, ww, ee, sw, ss, se, minIndex int
 	var pos int
 
+	// Keeps track of label keys
 	blobMap := make([][]int, imageHeight)
-	label := 1
-	labelTable := []int{0}
+	labelCounter := 1
+	labels := []int{0}
+
+	// Variables for neigboring pixels
+
+	isVisible := false
 
 	// Label every pixel as 0
 	for y := 0; y < imageHeight; y++ {
-		blobRow := make([]int, imageWidth)
-		blobMap[y] = blobRow
+		blobMap[y] = make([]int, imageWidth)
 	}
-
-	// Variables for neigboring pixels
-	imageData := sourceImage.(*image.NRGBA)
-	var nn, nw, ne, ww, ee, sw, ss, se, minIndex int
-	isVisible := false
 
 	// Need to make two passes
 	// First to identify all of the blob candidates
@@ -149,7 +169,7 @@ func DetectRegions(imageURL string) (regions []*Region, err error) {
 			for x := 1; x < imageWidth-1; x++ {
 				pos = (y*imageWidth + x) * 4
 
-				// We're only looking at the alpa channel in this case
+				// Don't want faintly visible pixels to start the region
 				if imageData.Pix[pos+3] > 127 {
 					isVisible = true
 				} else {
@@ -157,14 +177,14 @@ func DetectRegions(imageURL string) (regions []*Region, err error) {
 				}
 
 				if isVisible {
-					nw = blobMap[y-1][x-1]
-					nn = blobMap[y-1][x-0]
-					ne = blobMap[y-1][x+1]
-					ww = blobMap[y-0][x-1]
-					ee = blobMap[y-0][x+1]
-					sw = blobMap[y+1][x-1]
-					ss = blobMap[y+1][x-0]
-					se = blobMap[y+1][x+1]
+					nw = blobMap[y-1][x-1] // top left
+					nn = blobMap[y-1][x-0] // above
+					ne = blobMap[y-1][x+1] // top right
+					ww = blobMap[y-0][x-1] // left
+					ee = blobMap[y-0][x+1] // right
+					sw = blobMap[y+1][x-1] // bottom left
+					ss = blobMap[y+1][x-0] // beneath
+					se = blobMap[y+1][x+1] // bottom right
 					minIndex = ww
 
 					if 0 < ww && ww < minIndex {
@@ -200,40 +220,40 @@ func DetectRegions(imageURL string) (regions []*Region, err error) {
 					}
 
 					if minIndex == 0 {
-						blobMap[y][x] = label
-						labelTable = append(labelTable, label)
-						label++
+						blobMap[y][x] = labelCounter
+						labels = append(labels, labelCounter)
+						labelCounter++
 					} else {
-						if minIndex < labelTable[nw] {
-							labelTable[nw] = minIndex
+						if minIndex < labels[nw] {
+							labels[nw] = minIndex
 						}
 
-						if minIndex < labelTable[nn] {
-							labelTable[nn] = minIndex
+						if minIndex < labels[nn] {
+							labels[nn] = minIndex
 						}
 
-						if minIndex < labelTable[ne] {
-							labelTable[ne] = minIndex
+						if minIndex < labels[ne] {
+							labels[ne] = minIndex
 						}
 
-						if minIndex < labelTable[ww] {
-							labelTable[ww] = minIndex
+						if minIndex < labels[ww] {
+							labels[ww] = minIndex
 						}
 
-						if minIndex < labelTable[ee] {
-							labelTable[ee] = minIndex
+						if minIndex < labels[ee] {
+							labels[ee] = minIndex
 						}
 
-						if minIndex < labelTable[sw] {
-							labelTable[sw] = minIndex
+						if minIndex < labels[sw] {
+							labels[sw] = minIndex
 						}
 
-						if minIndex < labelTable[ss] {
-							labelTable[ss] = minIndex
+						if minIndex < labels[ss] {
+							labels[ss] = minIndex
 						}
 
-						if minIndex < labelTable[se] {
-							labelTable[se] = minIndex
+						if minIndex < labels[se] {
+							labels[se] = minIndex
 						}
 
 						blobMap[y][x] = minIndex
@@ -242,71 +262,77 @@ func DetectRegions(imageURL string) (regions []*Region, err error) {
 					blobMap[y][x] = 0
 				}
 			}
-
 		}
+
 		nIter--
 	}
 
 	// Compress the table of labels so that every location refers to only 1
 	// matching location
-	for i := range labelTable {
-		label = labelTable[i]
-		for label != labelTable[label] {
-			label = labelTable[label]
+	for i, label := range labels {
+		for label != labels[label] {
+			label = labels[label]
 		}
-		labelTable[i] = label
+
+		labels[i] = label
 	}
 
 	// Merge the blobs with multiple labels
 	for y := 0; y < imageHeight; y++ {
 		for x := 0; x < imageWidth; x++ {
-			// fmt.Printf("x=%d y=%d\n", x, y)
-			label = blobMap[y][x]
+			label := blobMap[y][x]
 			if label == 0 {
 				continue
 			}
 
-			for label != labelTable[label] {
-				label = labelTable[label]
+			for label != labels[label] {
+				label = labels[label]
 			}
 			blobMap[y][x] = label
 		}
 	}
 
-	// Conver the blobs to minimized labels
+	// Since the same label key:value pair are appended to the labelTable map,
+	// we can just lookup. Not sure if necessary in practice?
 	for y := 0; y < imageHeight; y++ {
 		for x := 0; x < imageWidth; x++ {
-			label = blobMap[y][x]
-			blobMap[y][x] = labelTable[label]
+			label := blobMap[y][x]
+			if label == 0 || label == labels[label] {
+				continue
+			}
+
+			blobMap[y][x] = labels[label]
 		}
 	}
 
 	blobs := map[int]*Region{}
 	for y := 0; y < imageHeight; y++ {
 		for x := 0; x < imageWidth; x++ {
-			l := blobMap[y][x]
-			if l <= 0 {
+			label := blobMap[y][x]
+			if label <= 0 {
 				continue
 			}
 
-			b := blobs[l]
-			if b != nil {
-				// fmt.Printf("l=%d X1=%d Y1=%d X2=%d Y2=%d, x=%d y=%d\n", l, b.X1, b.Y1, b.X2, b.Y2, x, y)
-
+			if b := blobs[label]; b != nil {
+				// The start of the region is before the first recorded label
 				if b.X1 > x {
 					b.X1 = x
 				}
 
+				// The known south-east region has been extended
 				if b.X2 < x {
 					b.X2 = x
 				}
 
+				// The known south-east region has been extended
 				if b.Y2 < y {
 					b.Y2 = y
 				}
 			} else {
-				blobs[l] = &Region{
-					label: l,
+				// Encountered a label for the first time, establish the region with
+				// kwnon coordinates.
+				blobs[label] = &Region{
+					label: label,
 					X1:    x,
 					Y1:    y,
 					X2:    x,
@@ -316,8 +342,8 @@ func DetectRegions(imageURL string) (regions []*Region, err error) {
 		}
 	}
 
-	for key := range blobs {
-		regions = append(regions, blobs[key])
+	for _, r := range blobs {
+		regions = append(regions, r)
 	}
 
 	return
