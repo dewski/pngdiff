@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/dewski/pngdiff/cmd/pngdiff"
@@ -58,6 +60,58 @@ func main() {
 
 			rw.WriteHeader(http.StatusOK)
 			fmt.Fprintf(rw, "{\"additions\": %d, \"deletions\": %d, \"diffs\": %d, \"changes\": %f}", additions, deletions, diffs, changes)
+		}
+	})
+
+	http.HandleFunc("/bounds", func(rw http.ResponseWriter, r *http.Request) {
+		minimumRegionArea := pngdiff.MinimumRegionArea
+		start := time.Now()
+		values := r.URL.Query()
+		imageURL := values.Get("image_url")
+		ra := values.Get("minimum_region_area")
+
+		if ra != "" {
+			var err error
+			minimumRegionArea, err = strconv.Atoi(ra)
+			if err != nil {
+				fmt.Printf("path=/bounds duration=400 minimum_region_area=%s\n", ra)
+				rw.WriteHeader(http.StatusBadRequest)
+				fmt.Fprint(rw, "{\"error\": \"Invalid minimum_region_area\"}")
+				return
+			}
+		}
+
+		if !validURL(imageURL) {
+			fmt.Printf("path=/bounds duration=400 image_url=%s\n", imageURL)
+			rw.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(rw, "{\"error\": \"Missing valid image_url\"}")
+			return
+		}
+
+		regions, err := pngdiff.DetectRegions(imageURL)
+		duration := time.Since(start)
+
+		filteredRegions := []*pngdiff.Region{}
+		for _, r := range regions {
+			if r.Area() < minimumRegionArea {
+				continue
+			}
+
+			filteredRegions = append(filteredRegions, r)
+		}
+
+		if err != nil {
+			fmt.Printf("path=/bounds status=500 took=%s\n", duration)
+
+			render500(rw, err)
+		} else {
+			fmt.Printf("path=/bounds duration=200 took=%s regions=%d filteredRegions=%d image_url=%s\n", duration, len(regions), len(filteredRegions), imageURL)
+
+			enc := json.NewEncoder(rw)
+			err = enc.Encode(&filteredRegions)
+			if err != nil {
+				render500(rw, err)
+			}
 		}
 	})
 
