@@ -48,12 +48,12 @@ func downloadFile(url string) (path string, err error) {
 func loadImage(path string) (image.Image, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, errors.New("Couldn't load the file.")
+		return nil, errors.New("couldn't load the file")
 	}
 
 	loadedImage, err := png.Decode(file)
 	if err != nil {
-		return nil, errors.New("Couldn't decode the PNG.")
+		return nil, errors.New("couldn't decode the PNG")
 	}
 
 	return loadedImage, nil
@@ -97,15 +97,15 @@ func maxHeight(baseImage, compareImage image.Image) int {
 }
 
 // Diff is cool
-func Diff(baseURL string, compareURL string) (additionsCount int, deletionsCount int, diffsCount int, changesCount float64, err error) {
+func Diff(baseURL, compareURL string) (additionsCount int, deletionsCount int, diffsCount int, changesCount float64, err error) {
 	baseImage, err := fetchImage(baseURL)
 	if err != nil {
-		return 0, 0, 0, 0.0, errors.New("Couldn't decode the base image.")
+		return 0, 0, 0, 0.0, errors.New("couldn't decode the base image")
 	}
 
 	compareImage, err := fetchImage(compareURL)
 	if err != nil {
-		return 0, 0, 0, 0.0, errors.New("Couldn't decode the comparison image.")
+		return 0, 0, 0, 0.0, errors.New("couldn't decode the comparison image")
 	}
 
 	baseData := baseImage.(*image.NRGBA)

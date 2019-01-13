@@ -32,7 +32,6 @@ func main() {
 	}
 
 	http.HandleFunc("/process", func(rw http.ResponseWriter, r *http.Request) {
-
 		start := time.Now()
 		rw.Header().Set("Content-Type", "application/json")
 
@@ -43,19 +42,18 @@ func main() {
 		if !validURL(baseURL) || !validURL(compareURL) {
 			fmt.Printf("path=/process duration=400 base_url=%s compare_url=%s\n", baseURL, compareURL)
 			rw.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(rw, "{\"error\": \"Missing base_url or compare_url\"}")
+			fmt.Fprint(rw, "{\"error\": \"Missing valid base_url and or compare_url\"}")
 			return
 		}
 
 		additions, deletions, diffs, changes, err := pngdiff.Diff(baseURL, compareURL)
+		duration := time.Since(start)
 
 		if err != nil {
-			fmt.Printf("path=/process status=500 took=%s\n", time.Since(start))
+			fmt.Printf("path=/process status=500 took=%s\n", duration)
 
 			render500(rw, err)
 		} else {
-			duration := time.Since(start)
-
 			fmt.Printf("path=/process duration=200 took=%s base_url=%s compare_url=%s\n", duration, baseURL, compareURL)
 
 			rw.WriteHeader(http.StatusOK)
