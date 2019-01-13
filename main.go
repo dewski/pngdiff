@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -75,7 +76,7 @@ func main() {
 			return
 		}
 
-		_, err := pngdiff.DetectRegions(imageURL)
+		regions, err := pngdiff.DetectRegions(imageURL)
 		duration := time.Since(start)
 
 		if err != nil {
@@ -85,8 +86,13 @@ func main() {
 		} else {
 			fmt.Printf("path=/bounds duration=200 took=%s image_url=%s\n", duration, imageURL)
 
-			rw.WriteHeader(http.StatusOK)
-			fmt.Fprintf(rw, "{\"bounds\": %d}", 1)
+			enc := json.NewEncoder(rw)
+			err = enc.Encode(&regions)
+			if err != nil {
+				render500(rw, err)
+			} else {
+				rw.WriteHeader(http.StatusOK)
+			}
 		}
 	})
 

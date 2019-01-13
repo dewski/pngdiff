@@ -98,10 +98,11 @@ func maxHeight(baseImage, compareImage image.Image) int {
 
 // Region is an area
 type Region struct {
-	x1 int
-	y1 int
-	x2 int
-	y2 int
+	label int
+	X1    int `json:"x1"`
+	Y1    int `json:"y1"`
+	X2    int `json:"x2"`
+	Y2    int `json:"y2"`
 }
 
 // Relative luminance
@@ -112,7 +113,7 @@ func relativeLuminance(pixel color.Color) float64 {
 
 // DetectRegions finds regions
 // Uses Connected-component labeling https://en.wikipedia.org/wiki/Connected-component_labeling
-func DetectRegions(imageURL string) (regions []Region, err error) {
+func DetectRegions(imageURL string) (regions []*Region, err error) {
 	sourceImage, err := loadImage(imageURL)
 	if err != nil {
 		return
@@ -120,57 +121,203 @@ func DetectRegions(imageURL string) (regions []Region, err error) {
 
 	imageWidth := sourceImage.Bounds().Dx()
 	imageHeight := sourceImage.Bounds().Dy()
+	var pos int
 
-	blobPixels := make([]int, imageWidth*imageHeight)
+	blobMap := make([][]int, imageHeight)
+	label := 1
+	labelTable := []int{0}
 
-	data := []uint32{}
-	cB := 1
+	// Label every pixel as 0
+	for y := 0; y < imageHeight; y++ {
+		blobRow := make([]int, imageWidth)
+		blobMap[y] = blobRow
+	}
 
+	// Variables for neigboring pixels
+	imageData := sourceImage.(*image.NRGBA)
+	var nn, nw, ne, ww, ee, sw, ss, se, minIndex int
+	isVisible := false
+
+	// Need to make two passes
+	// First to identify all of the blob candidates
+	// Second pass merges any blobs that the first pass failed to merge
+	nIter := 2
+	for nIter > 0 {
+		// Leave a 1 pixel border which is ignored so we do not get array out of
+		// bound errors
+		for y := 1; y < imageHeight-1; y++ {
+			for x := 1; x < imageWidth-1; x++ {
+				pos = (y*imageWidth + x) * 4
+
+				// We're only looking at the alpa channel in this case
+				if imageData.Pix[pos+3] > 127 {
+					isVisible = true
+				} else {
+					isVisible = false
+				}
+
+				if isVisible {
+					nw = blobMap[y-1][x-1]
+					nn = blobMap[y-1][x-0]
+					ne = blobMap[y-1][x+1]
+					ww = blobMap[y-0][x-1]
+					ee = blobMap[y-0][x+1]
+					sw = blobMap[y+1][x-1]
+					ss = blobMap[y+1][x-0]
+					se = blobMap[y+1][x+1]
+					minIndex = ww
+
+					if 0 < ww && ww < minIndex {
+						minIndex = ww
+					}
+
+					if 0 < ee && ee < minIndex {
+						minIndex = ee
+					}
+
+					if 0 < nn && nn < minIndex {
+						minIndex = nn
+					}
+
+					if 0 < ne && ne < minIndex {
+						minIndex = ne
+					}
+
+					if 0 < nw && nw < minIndex {
+						minIndex = nw
+					}
+
+					if 0 < ss && ss < minIndex {
+						minIndex = ss
+					}
+
+					if 0 < se && se < minIndex {
+						minIndex = se
+					}
+
+					if 0 < sw && sw < minIndex {
+						minIndex = sw
+					}
+
+					if minIndex == 0 {
+						blobMap[y][x] = label
+						labelTable = append(labelTable, label)
+						label++
+					} else {
+						if minIndex < labelTable[nw] {
+							labelTable[nw] = minIndex
+						}
+
+						if minIndex < labelTable[nn] {
+							labelTable[nn] = minIndex
+						}
+
+						if minIndex < labelTable[ne] {
+							labelTable[ne] = minIndex
+						}
+
+						if minIndex < labelTable[ww] {
+							labelTable[ww] = minIndex
+						}
+
+						if minIndex < labelTable[ee] {
+							labelTable[ee] = minIndex
+						}
+
+						if minIndex < labelTable[sw] {
+							labelTable[sw] = minIndex
+						}
+
+						if minIndex < labelTable[ss] {
+							labelTable[ss] = minIndex
+						}
+
+						if minIndex < labelTable[se] {
+							labelTable[se] = minIndex
+						}
+
+						blobMap[y][x] = minIndex
+					}
+				} else {
+					blobMap[y][x] = 0
+				}
+			}
+
+		}
+		nIter--
+	}
+
+	// Compress the table of labels so that every location refers to only 1
+	// matching location
+	for i := range labelTable {
+		label = labelTable[i]
+		for label != labelTable[label] {
+			label = labelTable[label]
+		}
+		labelTable[i] = label
+	}
+
+	// Merge the blobs with multiple labels
 	for y := 0; y < imageHeight; y++ {
 		for x := 0; x < imageWidth; x++ {
-			pixel := sourceImage.At(x, y)
-			_, _, _, alpha := pixel.RGBA()
-			lum := relativeLuminance(pixel)
+			// fmt.Printf("x=%d y=%d\n", x, y)
+			label = blobMap[y][x]
+			if label == 0 {
+				continue
+			}
 
-			if lum >= 127 {
-				data = append(data, 255, 255, 255, alpha)
+			for label != labelTable[label] {
+				label = labelTable[label]
+			}
+			blobMap[y][x] = label
+		}
+	}
+
+	// Conver the blobs to minimized labels
+	for y := 0; y < imageHeight; y++ {
+		for x := 0; x < imageWidth; x++ {
+			label = blobMap[y][x]
+			blobMap[y][x] = labelTable[label]
+		}
+	}
+
+	blobs := map[int]*Region{}
+	for y := 0; y < imageHeight; y++ {
+		for x := 0; x < imageWidth; x++ {
+			l := blobMap[y][x]
+			if l <= 0 {
+				continue
+			}
+
+			b := blobs[l]
+			if b != nil {
+				// fmt.Printf("l=%d X1=%d Y1=%d X2=%d Y2=%d, x=%d y=%d\n", l, b.X1, b.Y1, b.X2, b.Y2, x, y)
+
+				if b.X1 > x {
+					b.X1 = x
+				}
+
+				if b.X2 < x {
+					b.X2 = x
+				}
+
+				if b.Y2 < y {
+					b.Y2 = y
+				}
 			} else {
-				data = append(data, 0, 0, 0, alpha)
+				blobs[l] = &Region{
+					label: l,
+					X1:    x,
+					Y1:    y,
+					X2:    x,
+					Y2:    y,
+				}
 			}
 		}
 	}
 
-	for y := 0; y < imageHeight; y++ {
-		for x := 0; x < imageWidth; x++ {
-			position := (x + y*imageWidth) * 4
-			pixel := data[position]
-
-			if pixel == 255 {
-				if blobPixels[position] == 0 {
-					eB := 0
-					for xB := -1; xB < 2; xB++ {
-						if eB == 0 {
-							for yB := -1; yB < 2; yB++ {
-								bPos := (x + xB) + (y+yB)*imageWidth
-								if blobPixels[bPos] != 0 && eB == 0 {
-									eB = blobPixels[bPos]
-									break
-								}
-							}
-						} else {
-							break
-						}
-					}
-
-					if eB == 0 {
-						blobPixels[position] = cB
-
-					} else {
-						blobPixels[position] = eB
-					}
-				}
-			}
-		}
+	for key := range blobs {
+		regions = append(regions, blobs[key])
 	}
 
 	return
