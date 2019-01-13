@@ -63,6 +63,33 @@ func main() {
 		}
 	})
 
+	http.HandleFunc("/bounds", func(rw http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		values := r.URL.Query()
+		imageURL := values.Get("image_url")
+
+		if !validURL(imageURL) {
+			fmt.Printf("path=/bounds duration=400 image_url=%s\n", imageURL)
+			rw.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(rw, "{\"error\": \"Missing valid image_url\"}")
+			return
+		}
+
+		_, err := pngdiff.DetectRegions(imageURL)
+		duration := time.Since(start)
+
+		if err != nil {
+			fmt.Printf("path=/bounds status=500 took=%s\n", duration)
+
+			render500(rw, err)
+		} else {
+			fmt.Printf("path=/bounds duration=200 took=%s image_url=%s\n", duration, imageURL)
+
+			rw.WriteHeader(http.StatusOK)
+			fmt.Fprintf(rw, "{\"bounds\": %d}", 1)
+		}
+	})
+
 	http.HandleFunc("/_ping", func(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(http.StatusOK)
 		fmt.Fprintf(rw, "OK - %s", time.Now())

@@ -96,6 +96,86 @@ func maxHeight(baseImage, compareImage image.Image) int {
 	return int(math.Max(baseHeight, compareHeight))
 }
 
+// Region is an area
+type Region struct {
+	x1 int
+	y1 int
+	x2 int
+	y2 int
+}
+
+// Relative luminance
+func relativeLuminance(pixel color.Color) float64 {
+	r, g, b, _ := pixel.RGBA()
+	return (0.2126 * float64(r)) + (0.7152 * float64(g)) + (0.0722 * float64(b))
+}
+
+// DetectRegions finds regions
+// Uses Connected-component labeling https://en.wikipedia.org/wiki/Connected-component_labeling
+func DetectRegions(imageURL string) (regions []Region, err error) {
+	sourceImage, err := loadImage(imageURL)
+	if err != nil {
+		return
+	}
+
+	imageWidth := sourceImage.Bounds().Dx()
+	imageHeight := sourceImage.Bounds().Dy()
+
+	blobPixels := make([]int, imageWidth*imageHeight)
+
+	data := []uint32{}
+	cB := 1
+
+	for y := 0; y < imageHeight; y++ {
+		for x := 0; x < imageWidth; x++ {
+			pixel := sourceImage.At(x, y)
+			_, _, _, alpha := pixel.RGBA()
+			lum := relativeLuminance(pixel)
+
+			if lum >= 127 {
+				data = append(data, 255, 255, 255, alpha)
+			} else {
+				data = append(data, 0, 0, 0, alpha)
+			}
+		}
+	}
+
+	for y := 0; y < imageHeight; y++ {
+		for x := 0; x < imageWidth; x++ {
+			position := (x + y*imageWidth) * 4
+			pixel := data[position]
+
+			if pixel == 255 {
+				if blobPixels[position] == 0 {
+					eB := 0
+					for xB := -1; xB < 2; xB++ {
+						if eB == 0 {
+							for yB := -1; yB < 2; yB++ {
+								bPos := (x + xB) + (y+yB)*imageWidth
+								if blobPixels[bPos] != 0 && eB == 0 {
+									eB = blobPixels[bPos]
+									break
+								}
+							}
+						} else {
+							break
+						}
+					}
+
+					if eB == 0 {
+						blobPixels[position] = cB
+
+					} else {
+						blobPixels[position] = eB
+					}
+				}
+			}
+		}
+	}
+
+	return
+}
+
 // Diff is cool
 func Diff(baseURL string, compareURL string) (additionsCount int, deletionsCount int, diffsCount int, changesCount float64, err error) {
 	baseImage, err := fetchImage(baseURL)
