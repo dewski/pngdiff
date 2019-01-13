@@ -41,7 +41,7 @@ const MinimumRegionArea = 25
 // DetectRegions finds regions
 // Uses Connected-component labeling https://en.wikipedia.org/wiki/Connected-component_labeling
 func DetectRegions(imageURL string) (regions []*Region, err error) {
-	sourceImage, err := loadImage(imageURL)
+	sourceImage, err := fetchImage(imageURL)
 	if err != nil {
 		return
 	}
