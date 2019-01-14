@@ -48,7 +48,23 @@ func main() {
 			return
 		}
 
-		additions, deletions, diffs, changes, err := pngdiff.Diff(baseURL, compareURL)
+		baseImage, err := pngdiff.DownloadImage(baseURL)
+		if err != nil {
+			fmt.Printf("path=/process duration=500 base_url=%s compare_url=%s\n", baseURL, compareURL)
+			rw.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(rw, "{\"error\": \"Could not load base_url image\"}")
+			return
+		}
+
+		compareImage, err := pngdiff.DownloadImage(compareURL)
+		if err != nil {
+			fmt.Printf("path=/process duration=500 base_url=%s compare_url=%s\n", baseURL, compareURL)
+			rw.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(rw, "{\"error\": \"Could not load compare_url image\"}")
+			return
+		}
+
+		additions, deletions, diffs, changes, err := pngdiff.Diff(baseImage, compareImage)
 		duration := time.Since(start)
 
 		if err != nil {
@@ -88,7 +104,12 @@ func main() {
 			return
 		}
 
-		regions, err := pngdiff.DetectRegions(imageURL)
+		image, err := pngdiff.DownloadImage(imageURL)
+		if err != nil {
+			return
+		}
+
+		regions, err := pngdiff.DetectRegions(image)
 		duration := time.Since(start)
 
 		filteredRegions := []*pngdiff.Region{}

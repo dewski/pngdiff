@@ -40,16 +40,11 @@ const MinimumRegionArea = 25
 
 // DetectRegions finds regions
 // Uses Connected-component labeling https://en.wikipedia.org/wiki/Connected-component_labeling
-func DetectRegions(imageURL string) (regions []*Region, err error) {
-	sourceImage, err := fetchImage(imageURL)
-	if err != nil {
-		return
-	}
+func DetectRegions(img image.Image) (regions []*Region, err error) {
+	imageWidth := img.Bounds().Dx()
+	imageHeight := img.Bounds().Dy()
 
-	imageWidth := sourceImage.Bounds().Dx()
-	imageHeight := sourceImage.Bounds().Dy()
-
-	imageData := sourceImage.(*image.NRGBA)
+	imageData := img.(*image.NRGBA)
 	var nn, nw, ne, ww, ee, sw, ss, se, minIndex int
 	var pos int
 
