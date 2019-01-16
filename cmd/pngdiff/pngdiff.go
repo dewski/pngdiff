@@ -120,8 +120,6 @@ func Diff(baseImage, compareImage image.Image) (additionsCount int, deletionsCou
 	maxHeight := maxHeight(baseImage, compareImage)
 
 	for y := 0; y < maxHeight; y++ {
-		compareY := y + 1
-
 		if emptyPixel(baseImage.At(0, y)) {
 			start := y * realCompareWidth
 			finish := start + realCompareWidth
@@ -133,6 +131,7 @@ func Diff(baseImage, compareImage image.Image) (additionsCount int, deletionsCou
 
 			deletions = append(deletions, baseData.Pix[start:finish]...)
 		} else {
+			compareY := y + 1
 			startPixel := baseWidth * y
 			endPixel := startPixel + baseWidth
 			x := 0
