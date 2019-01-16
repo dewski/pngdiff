@@ -1,8 +1,8 @@
 package main
 
 import (
-	"context"
 	"errors"
+	"fmt"
 	"net/url"
 
 	"github.com/aws/aws-lambda-go/lambda"
@@ -33,21 +33,21 @@ type Response struct {
 }
 
 // ProcessDiff handles processing images.
-func ProcessDiff(ctx context.Context, event Payload) (Response, error) {
-	if !validURL(event.BaseURL) {
-		return Response{}, errors.New("missing valid base_url")
+func ProcessDiff(req Payload) (Response, error) {
+	if !validURL(req.BaseURL) {
+		return Response{}, fmt.Errorf("missing valid base_url got \"%s\"", req.BaseURL)
 	}
 
-	if !validURL(event.CompareURL) {
-		return Response{}, errors.New("missing valid compare_url")
+	if !validURL(req.CompareURL) {
+		return Response{}, fmt.Errorf("missing valid compare_url got \"%s\"", req.CompareURL)
 	}
 
-	baseImage, err := pngdiff.DownloadImage(event.BaseURL)
+	baseImage, err := pngdiff.DownloadImage(req.BaseURL)
 	if err != nil {
 		return Response{}, errors.New("could not download base_url")
 	}
 
-	compareImage, err := pngdiff.DownloadImage(event.CompareURL)
+	compareImage, err := pngdiff.DownloadImage(req.CompareURL)
 	if err != nil {
 		return Response{}, errors.New("could not download compare_url")
 	}

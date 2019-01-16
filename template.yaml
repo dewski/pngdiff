@@ -24,7 +24,7 @@ Resources:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /diff
-            Method: GET
+            Method: POST
       Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
         Variables:
           PARAM1: VALUE
@@ -41,32 +41,7 @@ Resources:
           Type: Api
           Properties:
             Path: /component-labeling
-            Method: GET
+            Method: POST
       Environment:
         Variables:
           PARAM1: VALUE
-
-Outputs:
-  DiffAPI:
-    Description: "API Gateway endpoint URL for Prod environment for First Function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/diff/"
-
-  DiffFunction:
-    Description: "First Lambda Function ARN"
-    Value: !GetAtt DiffFunction.Arn
-
-  DiffFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt DiffFunctionIamRole.Arn
-
-  ComponentLabelingAPI:
-    Description: "API Gateway endpoint URL for Prod environment for First Function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/component-labeling/"
-
-  ComponentLabelingFunction:
-    Description: "First Lambda Function ARN"
-    Value: !GetAtt ComponentLabelingFunction.Arn
-
-  ComponentFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt ComponentFunctionIamRole.Arn

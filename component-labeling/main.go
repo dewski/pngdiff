@@ -1,8 +1,8 @@
 package main
 
 import (
-	"context"
 	"errors"
+	"fmt"
 	"net/url"
 
 	"github.com/aws/aws-lambda-go/lambda"
@@ -30,12 +30,12 @@ type Response struct {
 }
 
 // ComponentLabeling finds components in an image and labels them.
-func ComponentLabeling(ctx context.Context, event Payload) (Response, error) {
-	if !validURL(event.ImageURL) {
-		return Response{}, errors.New("missing valid image_url")
+func ComponentLabeling(req Payload) (Response, error) {
+	if !validURL(req.ImageURL) {
+		return Response{}, fmt.Errorf("missing valid image_url got \"%s\"", req.ImageURL)
 	}
 
-	image, err := pngdiff.DownloadImage(event.ImageURL)
+	image, err := pngdiff.DownloadImage(req.ImageURL)
 	if err != nil {
 		return Response{}, errors.New("could not download image_url")
 	}
@@ -47,7 +47,7 @@ func ComponentLabeling(ctx context.Context, event Payload) (Response, error) {
 
 	filteredRegions := []*pngdiff.Region{}
 	for _, r := range regions {
-		if r.Area() < event.MinimumRegionArea {
+		if r.Area() < req.MinimumRegionArea {
 			continue
 		}
 
