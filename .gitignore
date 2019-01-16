@@ -1,3 +1,4 @@
-bin/pngdiff
-diff/diff
 /packaged.yaml
+bin/pngdiff
+/diff/diff
+/component-labeling/component-labeling

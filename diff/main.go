@@ -1,10 +1,12 @@
 package main
 
 import (
-	"errors"
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/dewski/pngdiff/cmd/pngdiff"
 )
@@ -18,12 +20,6 @@ func validURL(input string) bool {
 	return err == nil
 }
 
-// Payload handles the incoming request.
-type Payload struct {
-	BaseURL    string `json:"base_url"`
-	CompareURL string `json:"compare_url"`
-}
-
 // Response handles the diff response.
 type Response struct {
 	Additions int     `json:"additions"`
@@ -32,40 +28,54 @@ type Response struct {
 	Changes   float64 `json:"changes"`
 }
 
-// ProcessDiff handles processing images.
-func ProcessDiff(req Payload) (Response, error) {
-	if !validURL(req.BaseURL) {
-		return Response{}, fmt.Errorf("missing valid base_url got \"%s\"", req.BaseURL)
+func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	baseURL := request.QueryStringParameters["base_url"]
+	if !validURL(baseURL) {
+		return events.APIGatewayProxyResponse{}, fmt.Errorf("invalid base_url got %s", baseURL)
 	}
 
-	if !validURL(req.CompareURL) {
-		return Response{}, fmt.Errorf("missing valid compare_url got \"%s\"", req.CompareURL)
+	compareURL := request.QueryStringParameters["compare_url"]
+	if !validURL(compareURL) {
+		return events.APIGatewayProxyResponse{}, fmt.Errorf("invalid compare_url got %s", compareURL)
 	}
 
-	baseImage, err := pngdiff.DownloadImage(req.BaseURL)
+	baseImage, err := pngdiff.DownloadImage(baseURL)
 	if err != nil {
-		return Response{}, errors.New("could not download base_url")
+		return events.APIGatewayProxyResponse{}, fmt.Errorf("could not download base_url at %s", baseURL)
 	}
 
-	compareImage, err := pngdiff.DownloadImage(req.CompareURL)
+	compareImage, err := pngdiff.DownloadImage(compareURL)
 	if err != nil {
-		return Response{}, errors.New("could not download compare_url")
+		return events.APIGatewayProxyResponse{}, fmt.Errorf("could not download compare_url at %s", compareURL)
 	}
 
 	additions, deletions, diffs, changes, err := pngdiff.Diff(baseImage, compareImage)
 
 	if err != nil {
-		return Response{}, err
+		return events.APIGatewayProxyResponse{}, err
 	}
 
-	return Response{
+	response := Response{
 		Additions: additions,
 		Deletions: deletions,
 		Diffs:     diffs,
 		Changes:   changes,
+	}
+
+	json, err := json.Marshal(response)
+	if err != nil {
+		return events.APIGatewayProxyResponse{}, err
+	}
+
+	return events.APIGatewayProxyResponse{
+		Body: string(json),
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		StatusCode: 200,
 	}, nil
 }
 
 func main() {
-	lambda.Start(ProcessDiff)
+	lambda.Start(handler)
 }
