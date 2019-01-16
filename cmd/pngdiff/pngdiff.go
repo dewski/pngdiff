@@ -10,7 +10,6 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"time"
 )
 
 func downloadFile(url string) (path string, err error) {
@@ -22,12 +21,10 @@ func downloadFile(url string) (path string, err error) {
 	path = tmpfile.Name()
 
 	// Get the data
-	start := time.Now()
 	resp, err := http.Get(url)
 	if err != nil {
 		return
 	}
-	fmt.Println(url, time.Since(start))
 	defer resp.Body.Close()
 
 	// Writer the body to file

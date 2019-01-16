@@ -28,6 +28,23 @@ Resources:
       Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
         Variables:
           PARAM1: VALUE
+  ComponentLabeling:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: component-labeling/
+      Handler: component-labeling
+      Runtime: go1.x
+      Tracing: Active
+      MemorySize: 3008
+      Events:
+        CatchAll:
+          Type: Api
+          Properties:
+            Path: /component-labeling
+            Method: GET
+      Environment:
+        Variables:
+          PARAM1: VALUE
 
 Outputs:
   DiffAPI:
@@ -41,3 +58,15 @@ Outputs:
   DiffFunctionIamRole:
     Description: "Implicit IAM Role created for Hello World function"
     Value: !GetAtt DiffFunctionIamRole.Arn
+
+  ComponentLabelingAPI:
+    Description: "API Gateway endpoint URL for Prod environment for First Function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/component-labeling/"
+
+  ComponentLabelingFunction:
+    Description: "First Lambda Function ARN"
+    Value: !GetAtt ComponentLabelingFunction.Arn
+
+  ComponentFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt ComponentFunctionIamRole.Arn
