@@ -1,11 +1,10 @@
-all: install
+.PHONY: deps clean build
 
-install: build
-	mkdir -p bin
-	mv main bin/pngdiff
+deps:
+	go get -u ./...
 
-build: main.go
-	go build main.go
+clean:
+	rm -rf ./diff/diff
 
-run: install
-	bin/pngdiff
+build:
+	GOOS=linux GOARCH=amd64 go build -o diff/diff ./diff
